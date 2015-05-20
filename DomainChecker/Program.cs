@@ -50,6 +50,7 @@ namespace DomainChecker
                 Keyword = query.Substring(0, query.LastIndexOf('.'))
             };
 
+            // Look for wildcards and invalid TLDs
             string tldPart = query.Substring(query.LastIndexOf('.') + 1);
             if (tldPart.Contains('*'))
             {
@@ -66,11 +67,18 @@ namespace DomainChecker
         {
             List<string> ret = new List<string>();
 
-            ret.AddRange(
-                from tld in parameters.TLDs
-                let available = IsAvailable(parameters.Keyword, tld)
-                where available
-                select tld);
+            try
+            {
+                ret.AddRange(
+                    from tld in parameters.TLDs
+                    let available = IsAvailable(parameters.Keyword, tld)
+                    where available
+                    select tld);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR: {0}", ex.Message);                
+            }            
 
             return ret;
         } 
@@ -80,6 +88,7 @@ namespace DomainChecker
             List<string> ret = new List<string>();
             WebRequest webRequest = WebRequest.Create(MasterTLDListURL);
 
+            // Get the most recent list of TLDs to search on from IANA
             using (WebResponse response = webRequest.GetResponse())
             using (Stream content = response.GetResponseStream())
             using (StreamReader reader = new StreamReader(content))
@@ -96,58 +105,40 @@ namespace DomainChecker
             return ret;
         }
 
-        /// <summary>
-        /// http://stackoverflow.com/a/12701846
-        /// </summary>
         static bool IsAvailable(string keyword, string tld)
         {            
+            // Search IANA to find the whois server for the given TLD
             string whoisForRoot = GetWhoisInformation(RootTLDServerURL, tld);
             whoisForRoot = whoisForRoot.Remove(0, whoisForRoot.IndexOf("whois:", StringComparison.Ordinal) + 6).TrimStart();
 
+            // Search the resulting whois server to check domain availability
             string tldServer = whoisForRoot.Substring(0, whoisForRoot.IndexOf('\r'));
             string domain = string.Format("{0}.{1}", keyword, tld);
             string whois = GetWhoisInformation(tldServer, domain);
 
+            // TODO: Some whois servers may be returning different results for non matching domains
             return whois.Contains("Domain not found") || whois.Contains("No match for");
         }
 
         static string GetWhoisInformation(string whoisServer, string url)
         {
-            try
+            StringBuilder ret = new StringBuilder();
+
+            using (TcpClient whoisClient = new TcpClient(whoisServer, 43))
+            using (NetworkStream networkStream = whoisClient.GetStream())
+            using (BufferedStream bufferedStream = new BufferedStream(networkStream))
             {
-                StringBuilder ret = new StringBuilder();
+                StreamWriter streamWriter = new StreamWriter(bufferedStream);
+                streamWriter.WriteLine(url);
+                streamWriter.Flush();
 
-                using (TcpClient whoisClient = new TcpClient(whoisServer, 43))
-                using (NetworkStream networkStream = whoisClient.GetStream())
-                using (BufferedStream bufferedStream = new BufferedStream(networkStream))
-                {
-                    StreamWriter streamWriter = new StreamWriter(bufferedStream);
-                    streamWriter.WriteLine(url);
-                    streamWriter.Flush();
+                StreamReader streamReader = new StreamReader(bufferedStream);
 
-                    StreamReader streamReader = new StreamReader(bufferedStream);
-
-                    while (!streamReader.EndOfStream)
-                        ret.AppendLine(streamReader.ReadLine());
-                }
-
-                return ret.ToString();
+                while (!streamReader.EndOfStream)
+                    ret.AppendLine(streamReader.ReadLine());
             }
-            catch
-            {
-                return "Query failed";
-            }
-        }
-    }
 
-    public class DomainSearchParameters
-    {
-        public string Keyword { get; set; }
-        public List<string> TLDs { get; set; }
-
-        public DomainSearchParameters()
-        {
-            TLDs = new List<string>();
+            return ret.ToString();
         }
     }
 }
