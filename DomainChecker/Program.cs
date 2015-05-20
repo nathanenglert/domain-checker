@@ -12,11 +12,7 @@ namespace DomainChecker
     {
         private const string RootTLDServerURL = @"whois.iana.org";
         private const string MasterTLDListURL = @"http://data.iana.org/TLD/tlds-alpha-by-domain.txt";
-
-        /// <summary>
-        /// http://stackoverflow.com/a/12701846
-        /// </summary>
-        /// <param name="args"></param>
+        
         static void Main(string[] args)
         {            
             string query;
@@ -29,10 +25,21 @@ namespace DomainChecker
             {
                 if (query != null)
                 {
-                    string tld = query.Substring(query.LastIndexOf('.') + 1);
-                    if (tlds.Any(t => t.Equals(tld, StringComparison.OrdinalIgnoreCase)))
+                    string keywordPart = query.Substring(0, query.LastIndexOf('.'));
+                    string tldPart = query.Substring(query.LastIndexOf('.') + 1);
+
+                    if (tldPart.Contains('*'))
                     {
-                        bool available = IsAvailable(query, tld);
+                        var tldQuery = tldPart.Substring(0, tldPart.IndexOf('*'));
+                        foreach (var tld in tlds.Where(t => t.StartsWith(tldQuery, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            bool available = IsAvailable(keywordPart, tld);
+                            Console.WriteLine("{0} -- {1}", tld, available);
+                        }
+                    }
+                    else if (tlds.Any(t => t.Equals(tldPart, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        bool available = IsAvailable(keywordPart, tldPart);
                         Console.WriteLine(available);
                     }
                     else
@@ -62,15 +69,19 @@ namespace DomainChecker
             }
 
             return ret;
-        } 
+        }
 
-        static bool IsAvailable(string url, string tld)
+        /// <summary>
+        /// http://stackoverflow.com/a/12701846
+        /// </summary>
+        static bool IsAvailable(string keyword, string tld)
         {            
             string whoisForRoot = GetWhoisInformation(RootTLDServerURL, tld);
             whoisForRoot = whoisForRoot.Remove(0, whoisForRoot.IndexOf("whois:", StringComparison.Ordinal) + 6).TrimStart();
 
             string tldServer = whoisForRoot.Substring(0, whoisForRoot.IndexOf('\r'));
-            string whois = GetWhoisInformation(tldServer, url);
+            string domain = string.Format("{0}.{1}", keyword, tld);
+            string whois = GetWhoisInformation(tldServer, domain);
 
             return whois.Contains("Domain not found") || whois.Contains("No match for");
         }
