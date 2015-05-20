@@ -25,30 +25,53 @@ namespace DomainChecker
             {
                 if (query != null)
                 {
-                    string keywordPart = query.Substring(0, query.LastIndexOf('.'));
-                    string tldPart = query.Substring(query.LastIndexOf('.') + 1);
+                    DomainSearchParameters parameters = ParseQuery(query, tlds);
+                    List<string> availableTLDs = CheckForAvailableTLDs(parameters);
 
-                    if (tldPart.Contains('*'))
-                    {
-                        var tldQuery = tldPart.Substring(0, tldPart.IndexOf('*'));
-                        foreach (var tld in tlds.Where(t => t.StartsWith(tldQuery, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            bool available = IsAvailable(keywordPart, tld);
-                            Console.WriteLine("{0} -- {1}", tld, available);
-                        }
-                    }
-                    else if (tlds.Any(t => t.Equals(tldPart, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        bool available = IsAvailable(keywordPart, tldPart);
-                        Console.WriteLine(available);
-                    }
+                    if (!availableTLDs.Any())
+                        Console.WriteLine("No domains available.");
                     else
-                        Console.WriteLine("TLD not valid.");                    
+                    {
+                        foreach (var tld in availableTLDs)
+                            Console.WriteLine(tld);
+                    }
                 }
 
                 Console.Write("Query> ");
             }
         }
+
+        private static DomainSearchParameters ParseQuery(string query, List<string> tlds)
+        {
+            DomainSearchParameters ret = new DomainSearchParameters
+            {
+                Keyword = query.Substring(0, query.LastIndexOf('.'))
+            };
+
+            string tldPart = query.Substring(query.LastIndexOf('.') + 1);
+            if (tldPart.Contains('*'))
+            {
+                var tldQuery = tldPart.Substring(0, tldPart.IndexOf('*'));
+                ret.TLDs = tlds.Where(t => t.StartsWith(tldQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            else if (tlds.Any(t => t.Equals(tldPart, StringComparison.OrdinalIgnoreCase)))
+                ret.TLDs.Add(tldPart);
+
+            return ret;
+        }
+
+        static List<string> CheckForAvailableTLDs(DomainSearchParameters parameters)
+        {
+            List<string> ret = new List<string>();
+
+            ret.AddRange(
+                from tld in parameters.TLDs
+                let available = IsAvailable(parameters.Keyword, tld)
+                where available
+                select tld);
+
+            return ret;
+        } 
 
         static List<string> GetAllTLDs()
         {
@@ -112,6 +135,17 @@ namespace DomainChecker
             {
                 return "Query failed";
             }
+        }
+    }
+
+    public class DomainSearchParameters
+    {
+        public string Keyword { get; set; }
+        public List<string> TLDs { get; set; }
+
+        public DomainSearchParameters()
+        {
+            TLDs = new List<string>();
         }
     }
 }
