@@ -1,4 +1,4 @@
-# ${1:Project Name}
+# Domain Checker
 
 A C# app used for finding available domain names based on some search criteria.
 
@@ -15,6 +15,9 @@ Open it up in Visual Studio and run that sucka!
 5. Submit a pull request :D
 
 ## Credits
+
+If you like what you see, check out my blog here:
+http://nathanenglert.com
 
 Inspiration for the whois checker came from this StackOverflow post:
 http://stackoverflow.com/a/12701846
