@@ -41,8 +41,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DomainSearchParameters.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="ProgressDisplay.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Whois.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
