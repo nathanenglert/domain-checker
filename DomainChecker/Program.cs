@@ -19,8 +19,9 @@ namespace DomainChecker
             List<string> tlds = GetAllTLDs();
 
             Console.WriteLine("{0} TLDs loaded.", tlds.Count);
-
+            Console.WriteLine();
             Console.Write("Query> ");
+
             while ((query = Console.ReadLine()) != string.Empty)
             {
                 if (query != null)
@@ -37,6 +38,7 @@ namespace DomainChecker
                     }
                 }
 
+                Console.WriteLine();
                 Console.Write("Query> ");
             }
         }
