@@ -62,26 +62,27 @@ namespace DomainChecker
         static List<string> CheckForAvailableTLDs(DomainSearchParameters parameters)
         {
             List<string> ret = new List<string>();
+            
+            var total = parameters.TLDs.Count;
+            var progress = 0;
 
-            try
+            foreach (var tld in parameters.TLDs)
             {
-                var total = parameters.TLDs.Count;
-                var progress = 0;
+                progress++;
 
-                foreach (var tld in parameters.TLDs)
+                try
                 {
-                    progress++;
-
                     bool available = Whois.IsAvailable(parameters.Keyword, tld);
                     if (available) ret.Add(tld);
-                    
-                    ProgressDisplay.Update(progress, total);
                 }
+                catch
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("{0} - Error!", tld);
+                }
+
+                ProgressDisplay.Update(progress, total);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("ERROR: {0}", ex.Message);                
-            }            
 
             return ret;
         }        

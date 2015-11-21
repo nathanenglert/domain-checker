@@ -40,6 +40,9 @@ namespace DomainChecker
             string whoisForRoot = GetWhoisInformation(RootTLDServerURL, tld);
             whoisForRoot = whoisForRoot.Remove(0, whoisForRoot.IndexOf("whois:", StringComparison.Ordinal) + 6).TrimStart();
 
+            // Some TLDs don't have whois servers
+            if (!whoisForRoot.StartsWith("whois")) return false;
+
             // Search the resulting whois server to check domain availability
             string tldServer = whoisForRoot.Substring(0, whoisForRoot.IndexOf('\r'));
             string domain = string.Format("{0}.{1}", keyword, tld);
@@ -49,7 +52,7 @@ namespace DomainChecker
             return whois.Contains("Domain not found") || whois.Contains("No match for");
         }
 
-        private static string GetWhoisInformation(string whoisServer, string url)
+        private static string GetWhoisInformation(string whoisServer, string query)
         {
             StringBuilder ret = new StringBuilder();
 
@@ -58,7 +61,7 @@ namespace DomainChecker
             using (BufferedStream bufferedStream = new BufferedStream(networkStream))
             {
                 StreamWriter streamWriter = new StreamWriter(bufferedStream);
-                streamWriter.WriteLine(url);
+                streamWriter.WriteLine(query);
                 streamWriter.Flush();
 
                 StreamReader streamReader = new StreamReader(bufferedStream);
